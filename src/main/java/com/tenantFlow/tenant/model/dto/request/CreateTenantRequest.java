@@ -1,6 +1,8 @@
 package com.tenantFlow.tenant.model.dto.request;
 
+import com.tenantFlow.tenant.model.entity.Tenant;
 import com.tenantFlow.tenant.model.validation.annotation.ValidSlug;
+import com.tenantFlow.validation.annotation.Unique;
 import jakarta.validation.constraints.*;
 import lombok.Getter;
 import lombok.Setter;
@@ -15,6 +17,11 @@ public class CreateTenantRequest {
 
     @NotBlank(message = "Slug is required")
     @ValidSlug
+    @Unique(
+            entity = Tenant.class,
+            field = "slug",
+            message = "Slug already exists"
+    )
     private String slug;
 
     @NotBlank(message = "Email is required")

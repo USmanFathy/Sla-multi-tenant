@@ -6,7 +6,7 @@ import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
-import java.time.Instant;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -44,10 +44,10 @@ public class Tenant {
 
     @Column(name = "created_at")
     @CreationTimestamp
-    private Instant createdAt;
+    private LocalDateTime createdAt;
     @Column(name = "updated_at")
     @UpdateTimestamp
-    private Instant updatedAt;
+    private LocalDateTime updatedAt;
     @OneToMany(mappedBy = "tenant", fetch = FetchType.LAZY)
     private List<TenantBranding> brandings = new ArrayList<>();
 }
