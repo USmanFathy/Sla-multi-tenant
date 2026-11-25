@@ -26,6 +26,12 @@ public class Tenant {
     @Column(nullable = false, length = 100)
     private String name;
 
+    @Column(nullable = false, unique = true, length = 6)
+    private String code;
+    @Column(name = "database_name",
+            unique = true, length = 64)
+    private String databaseName;
+
     @Column(nullable = false, unique = true, length = 63)
     private String slug;
 
