@@ -58,4 +58,12 @@ public class TenantController {
                 tenantService.getTenantById(id)
         );
     }
+    @PostMapping("/{id}/approve")
+    public ResponseEntity<TenantResponse> approveTenant(
+            @PathVariable UUID id
+    ) {
+        return ResponseEntity.ok(
+                tenantService.approveTenant(id)
+        );
+    }
 }

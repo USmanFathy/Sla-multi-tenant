@@ -1,6 +1,7 @@
 package com.tenantFlow.tenant.service;
 
 import com.tenantFlow.pagination.PaginationResponse;
+import com.tenantFlow.pagination.SortValidator;
 import com.tenantFlow.specification.FilterCriteria;
 import com.tenantFlow.specification.FilterOperation;
 import com.tenantFlow.specification.GenericSpecification;
@@ -8,8 +9,11 @@ import com.tenantFlow.tenant.model.dto.request.CreateTenantRequest;
 import com.tenantFlow.tenant.model.dto.request.TenantFilterRequest;
 import com.tenantFlow.tenant.model.dto.response.TenantResponse;
 import com.tenantFlow.tenant.model.entity.Tenant;
+import com.tenantFlow.tenant.model.entity.TenantOwnerRegistration;
 import com.tenantFlow.tenant.model.enums.TenantStatus;
 import com.tenantFlow.tenant.model.mapper.TenantMapper;
+import com.tenantFlow.tenant.model.mapper.TenantOwnerRegistrationMapper;
+import com.tenantFlow.tenant.repository.TenantOwnerRegistrationRepository;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
@@ -17,17 +21,30 @@ import org.springframework.stereotype.Service;
 
 import com.tenantFlow.tenant.repository.TenantRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.security.SecureRandom;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 
 
 @Service
 @RequiredArgsConstructor
 public class TenantService {
-
+    private static final Set<String> ALLOWED_SORT_FIELDS =
+            Set.of(
+                    "name",
+                    "status",
+                    "createdAt",
+                    "updatedAt",
+                    "code",
+                    "slug"
+            );
+    private final TenantOwnerRegistrationRepository ownerRepository;
+    private final TenantBrandingService tenantBrandingService;
+    private final TenantOwnerRegistrationMapper ownerMapper;
     private final TenantRepository tenantRepository;
     private final TenantMapper tenantMapper;
     private static final SecureRandom random = new SecureRandom();
@@ -38,12 +55,27 @@ public class TenantService {
     public long countTenants() {
         return tenantRepository.count();
     }
-    public TenantResponse createTenant(CreateTenantRequest createTenantRequest){
-        Tenant tenant = this.tenantMapper.toEntity(createTenantRequest);
+    @Transactional
+    public TenantResponse createTenant(CreateTenantRequest request) {
+
+        Tenant tenant = tenantMapper.toEntity(request);
+
         tenant.setStatus(TenantStatus.PENDING);
         tenant.setCode(generateTenantCode());
-        Tenant savedTenant = this.tenantRepository.save(tenant);
-        return this.tenantMapper.toResponse(savedTenant);
+
+        Tenant savedTenant = tenantRepository.save(tenant);
+
+        TenantOwnerRegistration owner =
+                ownerMapper.toEntity(request.getOwner());
+
+        owner.setTenant(savedTenant);
+
+        ownerRepository.save(owner);
+        tenantBrandingService.createInitialBranding(
+                savedTenant,
+                request.getBranding()
+        );
+        return tenantMapper.toResponse(savedTenant);
     }
     public Page<TenantResponse> getTenants(Pageable pageable) {
 
@@ -54,7 +86,7 @@ public class TenantService {
             TenantFilterRequest request,
             Pageable pageable
     ) {
-
+        SortValidator.validate(pageable, ALLOWED_SORT_FIELDS);
         List<FilterCriteria> filters = List.of(
                 new FilterCriteria(
                         "status", request.getStatus(),
@@ -86,6 +118,33 @@ public class TenantService {
                         HttpStatus.NOT_FOUND,
                         "Tenant not found"
                 ));
+
+        return tenantMapper.toResponse(tenant);
+    }
+    @Transactional
+    public TenantResponse approveTenant(UUID id) {
+
+        Tenant tenant = tenantRepository.findByIdForUpdate(id)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND,
+                        "Tenant not found"
+                ));
+
+        if (tenant.getStatus() != TenantStatus.PENDING) {
+
+            throw new ResponseStatusException(
+                    HttpStatus.CONFLICT,
+                    "Tenant is not pending approval"
+            );
+        }
+
+        tenant.setDatabaseName(
+                "tenant_" + tenant.getId()
+                        .toString()
+                        .replace("-", "")
+        );
+
+        tenant.setStatus(TenantStatus.PROVISIONING);
 
         return tenantMapper.toResponse(tenant);
     }
