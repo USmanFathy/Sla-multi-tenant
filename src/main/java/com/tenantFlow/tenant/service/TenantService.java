@@ -5,6 +5,7 @@ import com.tenantFlow.pagination.SortValidator;
 import com.tenantFlow.specification.FilterCriteria;
 import com.tenantFlow.specification.FilterOperation;
 import com.tenantFlow.specification.GenericSpecification;
+import com.tenantFlow.tenant.event.TenantApprovedEvent;
 import com.tenantFlow.tenant.model.dto.request.CreateTenantRequest;
 import com.tenantFlow.tenant.model.dto.request.TenantFilterRequest;
 import com.tenantFlow.tenant.model.dto.response.TenantDetailsResponse;
@@ -15,6 +16,8 @@ import com.tenantFlow.tenant.model.enums.TenantStatus;
 import com.tenantFlow.tenant.model.mapper.TenantMapper;
 import com.tenantFlow.tenant.model.mapper.TenantOwnerRegistrationMapper;
 import com.tenantFlow.tenant.repository.TenantOwnerRegistrationRepository;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
@@ -34,6 +37,10 @@ import java.util.UUID;
 @Service
 @RequiredArgsConstructor
 public class TenantService {
+    @Value("${tenant.prefix}")
+    private String prefix;
+    @Value("${tenant.suffix}")
+    private String suffix;
     private static final Set<String> ALLOWED_SORT_FIELDS =
             Set.of(
                     "name",
@@ -49,7 +56,7 @@ public class TenantService {
     private final TenantRepository tenantRepository;
     private final TenantMapper tenantMapper;
     private static final SecureRandom random = new SecureRandom();
-
+    private final ApplicationEventPublisher eventPublisher;
     private String generateTenantCode() {
         return String.valueOf(100000 + random.nextInt(900000));
     }
@@ -154,13 +161,18 @@ public class TenantService {
         }
 
         tenant.setDatabaseName(
-                "tenant_" + tenant.getId()
-                        .toString()
-                        .replace("-", "")
+                generateDatabaseName(id)
         );
 
         tenant.setStatus(TenantStatus.PROVISIONING);
-
+        eventPublisher.publishEvent(
+                new TenantApprovedEvent(id)
+        );
         return tenantMapper.toResponse(tenant);
+    }
+    private String generateDatabaseName(UUID tenantId) {
+        return prefix
+                + tenantId.toString().replace("-", "")
+                + suffix;
     }
 }

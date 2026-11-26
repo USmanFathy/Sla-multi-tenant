@@ -61,8 +61,7 @@ public class TenantController {
     public ResponseEntity<TenantResponse> approveTenant(
             @PathVariable UUID id
     ) {
-        return ResponseEntity.ok(
-                tenantService.approveTenant(id)
-        );
+        return ResponseEntity.accepted()
+                .body(tenantService.approveTenant(id));
     }
 }
