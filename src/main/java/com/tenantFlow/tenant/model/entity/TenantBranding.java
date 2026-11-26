@@ -47,9 +47,6 @@ public class TenantBranding {
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private BrandingStatus status;
-    @Column(nullable = false, updatable = false)
-    private UUID createdBy;
-
     @CreationTimestamp
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;

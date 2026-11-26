@@ -1,6 +1,7 @@
 package com.tenantFlow.tenant.model.mapper;
 
 import com.tenantFlow.tenant.model.dto.request.CreateTenantRequest;
+import com.tenantFlow.tenant.model.dto.response.TenantDetailsResponse;
 import com.tenantFlow.tenant.model.dto.response.TenantResponse;
 import com.tenantFlow.tenant.model.entity.Tenant;
 import org.mapstruct.Mapper;
@@ -18,4 +19,7 @@ public interface TenantMapper {
     Tenant toEntity(CreateTenantRequest request);
 
     TenantResponse toResponse(Tenant tenant);
+    @Mapping(target = "owner", ignore = true)
+    @Mapping(target = "brandings", ignore = true)
+    TenantDetailsResponse toDetailsResponse(Tenant tenant);
 }

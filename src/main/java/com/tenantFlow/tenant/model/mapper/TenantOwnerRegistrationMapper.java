@@ -1,6 +1,7 @@
 package com.tenantFlow.tenant.model.mapper;
 
 import com.tenantFlow.tenant.model.dto.request.CreateTenantOwnerRequest;
+import com.tenantFlow.tenant.model.dto.response.TenantOwnerResponse;
 import com.tenantFlow.tenant.model.entity.TenantOwnerRegistration;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
@@ -13,5 +14,8 @@ public interface TenantOwnerRegistrationMapper {
     @Mapping(target = "createdAt", ignore = true)
     TenantOwnerRegistration toEntity(
             CreateTenantOwnerRequest request
+    );
+    TenantOwnerResponse toResponse(
+            TenantOwnerRegistration owner
     );
 }

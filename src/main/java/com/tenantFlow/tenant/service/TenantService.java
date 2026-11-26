@@ -7,6 +7,7 @@ import com.tenantFlow.specification.FilterOperation;
 import com.tenantFlow.specification.GenericSpecification;
 import com.tenantFlow.tenant.model.dto.request.CreateTenantRequest;
 import com.tenantFlow.tenant.model.dto.request.TenantFilterRequest;
+import com.tenantFlow.tenant.model.dto.response.TenantDetailsResponse;
 import com.tenantFlow.tenant.model.dto.response.TenantResponse;
 import com.tenantFlow.tenant.model.entity.Tenant;
 import com.tenantFlow.tenant.model.entity.TenantOwnerRegistration;
@@ -111,7 +112,8 @@ public class TenantService {
         return PaginationResponse.from(tenants);
     }
 
-    public TenantResponse getTenantById(UUID id) {
+    @Transactional(readOnly = true)
+    public TenantDetailsResponse getTenantById(UUID id) {
 
         Tenant tenant = tenantRepository.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(
@@ -119,7 +121,20 @@ public class TenantService {
                         "Tenant not found"
                 ));
 
-        return tenantMapper.toResponse(tenant);
+        TenantDetailsResponse response =
+                tenantMapper.toDetailsResponse(tenant);
+        TenantOwnerRegistration owner =
+                ownerRepository.findByTenant_Id(id)
+                        .orElseThrow(() -> new ResponseStatusException(
+                                HttpStatus.INTERNAL_SERVER_ERROR,
+                                "Tenant owner registration not found"
+                        ));
+
+        response.setOwner(ownerMapper.toResponse(owner));
+        response.setBrandings(
+                tenantBrandingService.getBrandings(id)
+        );
+        return response;
     }
     @Transactional
     public TenantResponse approveTenant(UUID id) {

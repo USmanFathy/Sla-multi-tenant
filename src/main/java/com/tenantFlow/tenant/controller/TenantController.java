@@ -2,6 +2,7 @@ package com.tenantFlow.tenant.controller;
 import com.tenantFlow.pagination.PaginationResponse;
 import com.tenantFlow.tenant.model.dto.request.CreateTenantRequest;
 import com.tenantFlow.tenant.model.dto.request.TenantFilterRequest;
+import com.tenantFlow.tenant.model.dto.response.TenantDetailsResponse;
 import com.tenantFlow.tenant.model.dto.response.TenantResponse;
 import com.tenantFlow.tenant.model.entity.Tenant;
 import com.tenantFlow.tenant.service.TenantService;
@@ -12,6 +13,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -39,21 +41,18 @@ public class TenantController {
                 tenantService.getTenants(request, pageable)
         );
     }
-    @PostMapping
+    @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<TenantResponse> createTenant(
-            @Valid @RequestBody CreateTenantRequest request
+            @Valid @ModelAttribute CreateTenantRequest request
     ) {
-
-        TenantResponse response =
-                tenantService.createTenant(request);
-
-        return ResponseEntity
-                .status(HttpStatus.CREATED)
-                .body(response);
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(tenantService.createTenant(request));
     }
 
     @GetMapping("/{id}")
-    public  ResponseEntity<TenantResponse> detailTenant(@PathVariable UUID id){
+    public ResponseEntity<TenantDetailsResponse> getTenantById(
+            @PathVariable UUID id
+    ) {
         return ResponseEntity.ok(
                 tenantService.getTenantById(id)
         );
