@@ -21,7 +21,7 @@ public interface TenantRepository
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("SELECT t FROM Tenant t WHERE t.id = :id")
     Optional<Tenant> findByIdForUpdate(@Param("id") UUID id);
-
+    Optional<Tenant> findBySlug(String slug);
     List<Tenant> findAllByStatusInAndDatabaseNameIsNotNull(
             Collection<TenantStatus> statuses,
             Pageable pageable
