@@ -1,7 +1,12 @@
 package com.tenantFlow.tenant.service;
+import com.tenantFlow.tenant.context.TenantContext;
 import com.tenantFlow.tenant.model.entity.Tenant;
+import com.tenantFlow.tenant.model.entity.TenantOwnerRegistration;
 import com.tenantFlow.tenant.model.enums.TenantStatus;
+import com.tenantFlow.tenant.repository.TenantOwnerRegistrationRepository;
 import com.tenantFlow.tenant.repository.TenantRepository;
+import com.tenantFlow.workspace.model.dto.request.OwnerSeedData;
+import com.tenantFlow.workspace.seeder.TenantOwnerSeeder;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -19,7 +24,11 @@ public class TenantProvisioningService {
     private final DataSource dataSource;
     private final TenantRepository tenantRepository;
     private final TenantMigrationService migrationService;
+    private final TenantOwnerSeeder tenantOwnerSeeder;
+    private final TenantActivationService tenantActivationService;
 
+    private final TenantOwnerRegistrationRepository
+            tenantOwnerRegistrationRepository;
     public void provisionTenant(UUID tenantId) {
 
         Tenant tenant = tenantRepository.findById(tenantId)
@@ -33,6 +42,39 @@ public class TenantProvisioningService {
 
         createDatabase(tenant.getDatabaseName());
         migrationService.migrate(tenant.getDatabaseName());
+        TenantOwnerRegistration registration =
+                tenantOwnerRegistrationRepository
+                        .findByTenant_Id(tenantId)
+                        .orElseThrow(() ->
+                                new IllegalStateException(
+                                        "Owner registration not found"
+                                )
+                        );
+
+        OwnerSeedData ownerData = new OwnerSeedData(
+
+                registration.getId(),
+
+                registration.getName(),
+
+                registration.getUsername(),
+
+                registration.getEmail()
+        );
+
+        TenantContext.set(tenant.getDatabaseName());
+
+        try {
+
+            tenantOwnerSeeder.seed(ownerData);
+
+        } finally {
+
+            TenantContext.clear();
+        }
+        tenantActivationService.activate(tenantId);
+
+        log.info("Tenant activated successfully: {}", tenantId);
     }
 
     public void createDatabase(String databaseName) {

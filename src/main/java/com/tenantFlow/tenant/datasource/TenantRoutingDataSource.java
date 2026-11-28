@@ -1,57 +1,35 @@
 package com.tenantFlow.tenant.datasource;
 
 import com.tenantFlow.tenant.context.TenantContext;
+import lombok.RequiredArgsConstructor;
+import org.springframework.jdbc.datasource.AbstractDataSource;
 
-import org.springframework.jdbc.datasource.DriverManagerDataSource;
-import org.springframework.jdbc.datasource.lookup.AbstractRoutingDataSource;
+import java.sql.Connection;
+import java.sql.SQLException;
+import java.sql.SQLFeatureNotSupportedException;
 
-import javax.sql.DataSource;
-import java.util.Map;
-
+@RequiredArgsConstructor
 public class TenantRoutingDataSource
-        extends AbstractRoutingDataSource {
+        extends AbstractDataSource {
 
-    private final String baseUrl;
-    private final String username;
-    private final String password;
+    private final TenantDataSourceManager dataSourceManager;
 
-    public TenantRoutingDataSource(
-            String baseUrl,
+    @Override
+    public Connection getConnection() throws SQLException {
+
+        String databaseName = TenantContext.get();
+
+        return dataSourceManager.getConnection(databaseName);
+    }
+
+    @Override
+    public Connection getConnection(
             String username,
             String password
-    ) {
-        this.baseUrl = baseUrl;
-        this.username = username;
-        this.password = password;
+    ) throws SQLException {
 
-        setTargetDataSources(Map.of());
-        setLenientFallback(false);
-    }
-
-    @Override
-    protected Object determineCurrentLookupKey() {
-
-        return TenantContext.get();
-    }
-
-    @Override
-    protected DataSource determineTargetDataSource() {
-
-        String databaseName =
-                (String) determineCurrentLookupKey();
-
-        if (databaseName == null ||
-                !databaseName.matches("^[a-zA-Z0-9_]{1,64}$")) {
-
-            throw new IllegalStateException(
-                    "Invalid or missing tenant context"
-            );
-        }
-
-        return new DriverManagerDataSource(
-                baseUrl + databaseName,
-                username,
-                password
+        throw new SQLFeatureNotSupportedException(
+                "Custom credentials are not supported"
         );
     }
 }

@@ -1,5 +1,6 @@
 package com.tenantFlow.config.persistence;
 
+import com.tenantFlow.tenant.datasource.TenantDataSourceManager;
 import com.tenantFlow.tenant.datasource.TenantRoutingDataSource;
 
 import org.springframework.beans.factory.annotation.Value;
@@ -11,29 +12,27 @@ import java.util.Map;
 
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.jpa.EntityManagerFactoryBuilder;
+import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
 import org.springframework.orm.jpa.LocalContainerEntityManagerFactoryBean;
+import jakarta.persistence.EntityManagerFactory;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.orm.jpa.JpaTransactionManager;
 
 @Configuration
+@EnableJpaRepositories(
+        basePackages = "com.tenantFlow.workspace.repository",
+        entityManagerFactoryRef = "tenantEntityManagerFactory",
+        transactionManagerRef = "tenantTransactionManager"
+)
 public class TenantPersistenceConfig {
 
     @Bean(name = "tenantDataSource")
     public DataSource tenantDataSource(
-            @Value("${tenant.datasource.base-url}")
-            String baseUrl,
-
-            @Value("${spring.datasource.username}")
-            String username,
-
-            @Value("${spring.datasource.password}")
-            String password
+            TenantDataSourceManager dataSourceManager
     ) {
-
-        return new TenantRoutingDataSource(
-                baseUrl,
-                username,
-                password
-        );
+        return new TenantRoutingDataSource(dataSourceManager);
     }
+
     @Bean(name = "tenantEntityManagerFactory")
     public LocalContainerEntityManagerFactoryBean
     tenantEntityManagerFactory(
@@ -57,5 +56,13 @@ public class TenantPersistenceConfig {
                 .persistenceUnit("tenant")
                 .properties(properties)
                 .build();
+    }
+    @Bean(name = "tenantTransactionManager")
+    public PlatformTransactionManager tenantTransactionManager(
+            @Qualifier("tenantEntityManagerFactory")
+            EntityManagerFactory entityManagerFactory
+    ) {
+
+        return new JpaTransactionManager(entityManagerFactory);
     }
 }
